@@ -15,8 +15,10 @@ export class Indice {
   public codigoIndice: string;
 
   @Column({
-    type: 'int',
-    nullable: false,
+    name: 'valor',
+    type: 'decimal',
+    precision: 7,
+    scale: 2,
   })
   public valor: number;
 

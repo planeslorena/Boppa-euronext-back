@@ -1,6 +1,7 @@
 export interface IEmpresa{
     idEmpresa?: number;
-    codigo:string;
-    nombre: string;
-    cantAcciones: number;
+    codEmpresa:string;
+    empresaNombre: string;
+    cantidadAcciones: number;
+    cotizacionInicial:number;
 }

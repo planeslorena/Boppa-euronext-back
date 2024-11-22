@@ -8,9 +8,11 @@ import { IndiceModule } from './indice/indice.module';
 import { HttpModule } from '@nestjs/axios';
 import { GenDataService } from './services/gendata.cron.service';
 import { GempresaService } from './services/gempresa.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: 'localhost',
@@ -30,3 +32,4 @@ import { GempresaService } from './services/gempresa.service';
   providers: [AppService,GenDataService,GempresaService],
 })
 export class AppModule { }
+ 

@@ -15,12 +15,12 @@ export class Indice {
   public codigoIndice: string;
 
   @Column({
-    name: 'valor',
+    name: 'valorIndice',
     type: 'decimal',
     precision: 7,
     scale: 2,
   })
-  public valor: number;
+  public valorIndice: number;
 
   @Column({
     name: 'fecha',
@@ -36,17 +36,11 @@ export class Indice {
   })
   public hora: string;
 
-  @Column({
-    type: 'date',
-  })
-  public dateUTC: string;
-
-  constructor(codigoIndice: string, valor:number, fecha: string, hora:string, dateUTC: string) {
+  constructor(codigoIndice: string, valor:number, fecha: string, hora:string) {
     this.codigoIndice = codigoIndice;
-    this.valor = valor;
+    this.valorIndice = valor;
     this.fecha = fecha;
     this.hora = hora;
-    this.dateUTC = dateUTC;
   }
 
 }

@@ -30,8 +30,8 @@ export class EmpresaService {
   }
 
 
-  //Obtengo la ultima cotizacion guardada de una empresa
-  async getUltimaCotizacion(codigoEmpresa: string): Promise<Cotizacion[]> {
+  //Obtengo la ultimas 7 cotizaciones de una empresa
+  async getUltimasCotizaciones(codigoEmpresa: string): Promise<Cotizacion[]> {
     try {
       const criterio: FindManyOptions<Cotizacion> = {
         where: { empresa: { codEmpresa: codigoEmpresa } },
@@ -39,12 +39,11 @@ export class EmpresaService {
           dateUTC: "DESC",
           hora: "DESC"
         },
-        take: 2,
-        relations: { empresa: true }
+        take: 12,
       };
 
-      const ultCotizacion = await this.cotizacionRepository.find(criterio);
-      return ultCotizacion;
+      const ultCotizaciones = await this.cotizacionRepository.find(criterio);
+      return ultCotizaciones;
     } catch (error) {
       this.logger.error(error);
     }
@@ -107,7 +106,7 @@ export class EmpresaService {
     //Las recorro para buscar las cotizaciones faltantes
     empresas.forEach(async empresa => {
       //Busco la ultima cotizacion guardada de la empresa
-      const ultimasCot: Cotizacion[] = await this.getUltimaCotizacion(empresa.codEmpresa);
+      const ultimasCot: Cotizacion[] = await this.getUltimasCotizaciones(empresa.codEmpresa);
       let ultimaCot = ultimasCot[0];
 
       let fechaDesde = '';
@@ -116,6 +115,7 @@ export class EmpresaService {
       } else {
         fechaDesde = ultimaCot.fecha+'T'+ultimaCot.hora
       }
+
       //La fecha desde será la fecha y hora de la ult cotizacion convertida a UTC mas una hora (en este caso vuelve a quedar la misma fecha desde porq Amsterdam es UTC+1)
       fechaDesde = momentTZ.tz(fechaDesde,process.env.TIME_ZONE).utc().add(1,'hour').toISOString().substring(0,16);
 
@@ -130,12 +130,15 @@ export class EmpresaService {
       const cotizacionesValidas = cotizaciones.filter((cot) => {
         let validoDia = true;
         let validoHora = true;
+        const horaAperturaUTC = momentTZ.tz(cot.fecha + ' ' + process.env.HORA_APERTURA,process.env.TIME_ZONE).utc().format('HH:mm');
+        const horaCierreUTC = momentTZ.tz(cot.fecha + ' ' + process.env.HORA_CIERRE,process.env.TIME_ZONE).utc().format('HH:mm');
+        
         const dia = (DateUtils.getFechaFromRegistroFecha({ fecha: cot.fecha, hora: cot.hora })).getDay();
 
         if (dia == 0 || dia == 6) {
           validoDia = false;
         }
-        if (cot.hora < process.env.HORA_APERTURA_UTC || cot.hora > process.env.HORA_CIERRE_UTC) {
+        if (cot.hora < horaAperturaUTC|| cot.hora > horaCierreUTC) {
           validoHora = false;
         }
         return validoDia && validoHora;
@@ -167,10 +170,9 @@ export class EmpresaService {
     //Las recorro para buscar las cotizaciones faltantes
     let cotizaciones = await Promise.all(empresas.map(async empresa => {
       //Busco la ultima cotizacion guardada de la empresa
-      const ultimaCot = await this.getUltimaCotizacion(empresa.codEmpresa);
+      const ultimaCot = await this.getUltimasCotizaciones(empresa.codEmpresa);
 
       //Busco la cotizacion de cierre anterior
-      const horaCierre = '14:00'
       const criterio: FindManyOptions<Cotizacion> = {
         where: { empresa: { codEmpresa: empresa.codEmpresa }, hora: process.env.HORA_CIERRE, fecha: Not(ultimaCot[0].fecha) },
         order: {

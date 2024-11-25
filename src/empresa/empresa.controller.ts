@@ -22,8 +22,15 @@ export class EmpresaController {
   }
 
   //Trae los datos de todas las empresas, sus cotizaciones actuales y la variacion
-  @Get('/ultimasCotizaciones')
-  async getUltCotizaciones(): Promise<any[]> {
+  @Get('/cotizacionActual')
+  async getCotizacionActual(): Promise<any[]> {
     return await this.empresaService.cotizacionActual();
+  }
+
+  @Get('/ultimasCotizaciones/:codigoEmpresa')
+  async getUltCotizaciones(
+    @Param('codigoEmpresa') codigoEmpresa: string,
+  ): Promise<any[]> {
+    return await this.empresaService.getUltimasCotizaciones(codigoEmpresa);
   }
 }

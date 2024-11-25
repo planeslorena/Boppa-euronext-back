@@ -20,8 +20,7 @@ export class GempresaService {
             const respuesta: AxiosResponse<any, any> = await this.clientAxios.get(`/empresas/${codigoEmpresa}/details`);
             return respuesta.data;
         } catch (error:any) {
-            this.logger.error(error);
-            return error.response.data.statusCode;
+            this.logger.error(error.response.data.status + ' ' + error.response.data.error);
         }
     }
 
@@ -31,8 +30,7 @@ export class GempresaService {
                 {params: {fechaDesde: fechaDesde, fechaHasta: fechaHasta} });
             return respuesta.data;
         } catch (error:any) {
-            this.logger.error(error);
-            return error.response.data.statusCode;
+            this.logger.error(error.response.data.status + ' ' + error.response.data.error);
         }
     }
 
@@ -42,7 +40,6 @@ export class GempresaService {
             return respuesta.data;
         } catch (error:any) {
             this.logger.error(error.response.data.status + ' ' + error.response.data.error);
-            return error.response.data.statusCode;
         }
     }
 
@@ -51,8 +48,7 @@ export class GempresaService {
             const respuesta: AxiosResponse<any, any> = await this.clientAxios.get(`/indices`);
             return respuesta.data;
         } catch (error:any) {
-            this.logger.error(error);
-            return error.response.data.statusCode;
+            this.logger.error(error.response.data.status + ' ' + error.response.data.error);
         }
     }
 
@@ -62,8 +58,7 @@ export class GempresaService {
                 {params: {fechaDesde: fechaDesde, fechaHasta: fechaHasta} });
             return respuesta.data;
         } catch (error:any) {
-            this.logger.error(error);
-            return error.response.data.statusCode;
+            this.logger.error(error.response.data.status + ' ' + error.response.data.error);
         }
     }
 }

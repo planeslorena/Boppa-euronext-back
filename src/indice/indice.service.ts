@@ -111,7 +111,7 @@ export class IndiceService {
           //Las inserto en la tabla cotizaciones
           cotizaciones.forEach(async cotizacion => {
             this.indiceRepository.save({
-              codigoIndice: cotizacion.codigoIndice,
+              codigoIndice: cotizacion.codigoIndice, 
               valorIndice: cotizacion.valorIndice,
               fecha: cotizacion.fecha,
               hora: cotizacion.hora,

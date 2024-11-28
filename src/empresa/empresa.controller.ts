@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, Query } from "@nestjs/common";
 import { EmpresaService } from "./empresa.service";
 import { GempresaService } from "src/services/gempresa.service";
 import { IEmpresa } from "./model/IEmpresa";
@@ -30,7 +30,8 @@ export class EmpresaController {
   @Get('/ultimasCotizaciones/:codigoEmpresa')
   async getUltCotizaciones(
     @Param('codigoEmpresa') codigoEmpresa: string,
+    @Query('dias') dias: number,
   ): Promise<any[]> {
-    return await this.empresaService.getUltimasCotizaciones(codigoEmpresa);
+    return await this.empresaService.getDatosGrafico(codigoEmpresa,dias);
   }
 }

@@ -30,7 +30,7 @@ export class EmpresaService {
   }
 
 
-  //Obtengo la ultimas 7 cotizaciones de una empresa
+  //Obtengo la ultimas cotizacion de una empresa
   async getUltimasCotizaciones(codigoEmpresa: string): Promise<Cotizacion[]> {
     try {
       const criterio: FindManyOptions<Cotizacion> = {
@@ -39,49 +39,11 @@ export class EmpresaService {
           dateUTC: "DESC",
           hora: "DESC"
         },
-        take: 12,
+        take: 1,
       };
 
       const ultCotizaciones = await this.cotizacionRepository.find(criterio);
       return ultCotizaciones;
-    } catch (error) {
-      this.logger.error(error);
-    }
-  }
-
-  //Obtengo las cotizaciones de una empresa en un rango de fechas y horas dados
-  async getCotizacionesByFecha(codigoEmpresa: string,
-    fechaDesde: string,
-    fechaHasta: string,
-  ): Promise<Cotizacion[]> {
-    const fechaDesdeArray = fechaDesde.split('T');
-    const fechaHastaArray = fechaHasta.split('T');
-
-    try {
-      const criterio: FindOptionsWhere<Cotizacion> = {
-        empresa: {
-          codEmpresa: codigoEmpresa,
-        },
-        dateUTC: Between(fechaDesdeArray[0], fechaHastaArray[0]),
-      };
-
-      const cotizaciones: Cotizacion[] =
-        await this.cotizacionRepository.findBy(criterio);
-      return cotizaciones.filter((cot) => {
-        let validoDesde = true;
-        let validoHasta = true;
-        if (cot.fecha == fechaDesdeArray[0]) {
-          if (cot.hora < fechaDesdeArray[1]) {
-            validoDesde = false;
-          }
-        }
-        if (cot.fecha == fechaHastaArray[0]) {
-          if (cot.hora > fechaHastaArray[1]) {
-            validoHasta = false;
-          }
-        }
-        return validoDesde && validoHasta;
-      });
     } catch (error) {
       this.logger.error(error);
     }
@@ -167,7 +129,7 @@ export class EmpresaService {
     //Busco todas las empresas de la bolsa
     const empresas: Empresa[] = await this.getAllEmpresas();
 
-    //Las recorro para buscar las cotizaciones faltantes
+    //Las recorro para buscar las cotizaciones actuales
     let cotizaciones = await Promise.all(empresas.map(async empresa => {
       //Busco la ultima cotizacion guardada de la empresa
       const ultimaCot = await this.getUltimasCotizaciones(empresa.codEmpresa);
@@ -193,7 +155,75 @@ export class EmpresaService {
     );
     return cotizaciones;
   }
+
+  
+  /**
+   * Función que obtiene las cotizaciones de una empresa en un rango de fechas y horas dados
+   * @param codigoEmpresa 
+   * @param fechaDesde 
+   * @param fechaHasta 
+   * @returns 
+   */
+  async getCotizacionesByFecha(codigoEmpresa: string,
+    fechaDesde: string,
+    fechaHasta: string,
+  ): Promise<Cotizacion[]> {
+    const fechaDesdeArray = fechaDesde.split('T');
+    const fechaHastaArray = fechaHasta.split('T');
+
+    try {
+      const criterio: FindManyOptions<Cotizacion> = {
+        where: {
+          empresa: {
+            codEmpresa: codigoEmpresa,
+          },
+          dateUTC: Between(fechaDesdeArray[0], fechaHastaArray[0]),
+        },
+        order: {
+          fecha: "ASC",
+          hora: "ASC"
+        },
+      };
+
+      const cotizaciones: Cotizacion[] =
+        await this.cotizacionRepository.find(criterio);
+      return cotizaciones.filter((cot) => {
+        let validoDesde = true;
+        let validoHasta = true;
+        if (cot.fecha == fechaDesdeArray[0]) {
+          if (cot.hora < fechaDesdeArray[1]) {
+            validoDesde = false;
+          }
+        }
+        if (cot.fecha == fechaHastaArray[0]) {
+          if (cot.hora > fechaHastaArray[1]) {
+            validoHasta = false;
+          }
+        }
+        return validoDesde && validoHasta;
+      });
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  /**
+   * Función que obtiene los datos para cargar el grafico, segun cantidad de días a mostrar y la empresa seleccionada
+   * @param criterio 
+   * @returns 
+   */
+  async getDatosGrafico(codEmpresa: string,dias: number) {
+    const fechaDesde = momentTZ.tz(new Date(), process.env.TIME_ZONE).add(-dias, 'days').toISOString().substring(0, 16);
+    const fechaHasta = momentTZ.tz(new Date(), process.env.TIME_ZONE).toISOString().substring(0, 16);
+
+    let codIndices: Cotizacion[] = [];
+
+    const cotizaciones = await this.getCotizacionesByFecha(codEmpresa, fechaDesde, fechaHasta);
+    const datos = await Promise.all(cotizaciones);
+    return datos;
+  }
 }
+
 
 
 

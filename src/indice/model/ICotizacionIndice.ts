@@ -1,6 +1,6 @@
 export interface ICotizacionIndice {
-    codigoIndice: string;
-    valorIndice: string;
+    code: string;
+    valor: string;
     fecha:string;
     hora:string;
 }

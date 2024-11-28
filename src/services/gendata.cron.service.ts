@@ -15,21 +15,21 @@ export class GenDataService {
 
     //Establezco tarea programada que se ejecutara, cada una hora, en el minuto 5 de lunes a viernes de 9 a 15 hs. (el visual toma hora UTC?)
     //@Cron('0 5 9-15 * * 1-5')
-    @Cron('0 47 * * * *')
+    @Cron('0 24 * * * *')
     obtenerDatos() {
         this.logger.log('Obtener datos empresas iniciado');
         this.empresaService.obtenerDatosEmpresas();
     }
 
-   /*@Cron('0 30 * * * *')
+   @Cron('0 41 * * * *')
     crearIndice() {
         this.logger.log('Generar Indice iniciado ');
         this.indiceService.calcularIndices();
     }
 
-    @Cron('0 35 * * * *')
+    @Cron('0 46 * * * *')
     obtenerIndices() {
         this.logger.log('Traer indices iniciado');
         this.indiceService.obtenerIndices();
-    }*/
+    }
 }

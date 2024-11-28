@@ -1,11 +1,13 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { Indice } from "./entities/indice.entity";
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
-import { FindManyOptions, Repository } from "typeorm";
+import { Between, FindManyOptions, FindOptionsWhere, Repository } from "typeorm";
 import { Cotizacion } from "src/empresa/entities/cotizacion.entity";
 import { GempresaService } from "src/services/gempresa.service";
 import { IIndice } from "./model/IIndice";
 import DateUtils from "src/utils/dateUtils";
+import * as momentTZ from 'moment-timezone';
+
 
 @Injectable()
 export class IndiceService {
@@ -87,16 +89,16 @@ export class IndiceService {
     try {
       //Busco todas los indices
       const indices: IIndice[] = await this.gempresaService.getIndices();
-
+      console.log(indices)
       //Ls recorro para buscar las cotizaciones faltantes
       indices.forEach(async indice => {
-        if (indice.codigoIndice != 'N100') {
+        if (indice.code != 'N100') {
           //Busco la ultima cotizacion guardada de la empresa
-          let ultimaCot: Indice = await this.getUltimoValorIndice(indice.codigoIndice);
+          let ultimaCot: Indice = await this.getUltimoValorIndice(indice.code);
 
           let fechaDesde = ''
           if (!ultimaCot) {
-            fechaDesde = '2024-01-01T01:00:00.000Z';
+            fechaDesde = '2024-01-01T00:00';
           } else {
             //Le agrego una hora a la fecha y hora de la ultima cotizacion guardada
             fechaDesde = (DateUtils.agregarUnaHora(DateUtils.getFechaFromRegistroFecha({ fecha: ultimaCot.fecha, hora: ultimaCot.hora }))).toISOString().substring(0, 16);
@@ -106,22 +108,116 @@ export class IndiceService {
           const fechaHasta = (new Date()).toISOString().substring(0, 16);
 
           //Busco las cotizaciones faltantes
-          const cotizaciones: Indice[] = await this.gempresaService.getCotizacionesIndices(indice.codigoIndice, fechaDesde, fechaHasta);
+          const cotizaciones = await this.gempresaService.getCotizacionesIndices(indice.code, fechaDesde, fechaHasta);
 
-          //Las inserto en la tabla cotizaciones
-          cotizaciones.forEach(async cotizacion => {
-            this.indiceRepository.save({
-              codigoIndice: cotizacion.codigoIndice, 
-              valorIndice: cotizacion.valorIndice,
-              fecha: cotizacion.fecha,
-              hora: cotizacion.hora,
-              id: null
-            });
-          })
+          //Chequeo que las cotizaciones sean de dias habiles y de los horarios en que esta la bolsa abierta
+          if(cotizaciones) {
+            const cotizacionesValidas = cotizaciones.filter((cot) => {
+              let validoDia = true;
+              let validoHora = true;
+              const horaApertura = process.env.HORA_APERTURA
+              const horaCierre = process.env.HORA_CIERRE
+              
+              const dia = (DateUtils.getFechaFromRegistroFecha({ fecha: cot.fecha, hora: cot.hora })).getDay();
+      
+              if (dia == 0 || dia == 6) {
+                validoDia = false;
+              }
+              if (cot.hora < horaApertura|| cot.hora > horaCierre) {
+                validoHora = false;
+              }
+              return validoDia && validoHora;
+            })
+
+            if (cotizacionesValidas) {
+              //Las inserto en la tabla cotizaciones
+              cotizacionesValidas.forEach(async cotizacion => {
+                this.indiceRepository.save({
+                  codigoIndice: cotizacion.code,
+                  valorIndice: cotizacion.valor,
+                  fecha: cotizacion.fecha,
+                  hora: cotizacion.hora.substring(0,5),
+                  id: null
+                });
+              })
+            }
+          }
         }
       });
     } catch (error) {
       this.logger.error(error);
     }
+  }
+  /**
+   * Funcion que obtiene las cotizaciones de un indice en un rango de fechas establecido
+   * @param codigoIndice 
+   * @param fechaDesde 
+   * @param fechaHasta 
+   * @returns 
+   */
+  async getIndicesbyFecha(codigoIndice: string,
+    fechaDesde: string,
+    fechaHasta: string,
+  ): Promise<Indice[]> {
+    const fechaDesdeArray = fechaDesde.split('T');
+    const fechaHastaArray = fechaHasta.split('T');
+
+    try {
+      const criterio: FindManyOptions<Indice> = {
+        where: {
+          codigoIndice: codigoIndice,
+          fecha: Between(fechaDesdeArray[0], fechaHastaArray[0])
+        },
+        order: {
+          fecha: "ASC",
+          hora: "ASC"
+        },
+      };
+
+      const cotizaciones: Indice[] =
+        await this.indiceRepository.find(criterio);
+      return cotizaciones.filter((cot) => {
+        let validoDesde = true;
+        let validoHasta = true;
+        if (cot.fecha == fechaDesdeArray[0]) {
+          if (cot.hora < fechaDesdeArray[1]) {
+            validoDesde = false;
+          }
+        }
+        if (cot.fecha == fechaHastaArray[0]) {
+          if (cot.hora > fechaHastaArray[1]) {
+            validoHasta = false;
+          }
+        }
+        return validoDesde && validoHasta;
+      });
+    } catch (error) {
+      this.logger.error(error);
+    }
+  }
+
+  /**
+   * Función que obtiene los datos para cargar el grafico, segun cantidad de días a mostrar y si muestra todos los indices o solo el Euronext
+   * @param criterio 
+   * @returns 
+   */
+  async getDatosGrafico(criterio: { dias: number, allIndices: number }) {
+    const fechaDesde = momentTZ.tz(new Date(), process.env.TIME_ZONE).add(-criterio.dias, 'days').toISOString().substring(0, 16);
+    const fechaHasta = momentTZ.tz(new Date(), process.env.TIME_ZONE).toISOString().substring(0, 16);
+
+    let codIndices: IIndice[] = [];
+
+    if (criterio.allIndices == 1) {
+      codIndices = await this.gempresaService.getIndices();
+    } else {
+      codIndices.push({ code: 'N100', name: 'Euronext 100 Index' });
+    }
+
+    const cotizaciones = codIndices.map(async indice => {
+      return await this.getIndicesbyFecha(indice.code, fechaDesde, fechaHasta);
+    });
+    const datos = await Promise.all(cotizaciones);
+    const datosFiltrados = datos.filter(dataset => dataset.length != 0)
+    return datosFiltrados;
   }
 }

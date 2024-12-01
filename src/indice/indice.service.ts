@@ -1,7 +1,7 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { Indice } from "./entities/indice.entity";
 import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
-import { Between, FindManyOptions, FindOptionsWhere, Repository } from "typeorm";
+import { Between, FindManyOptions, FindOptionsWhere, Not, Repository } from "typeorm";
 import { Cotizacion } from "src/empresa/entities/cotizacion.entity";
 import { GempresaService } from "src/services/gempresa.service";
 import { IIndice } from "./model/IIndice";
@@ -111,19 +111,19 @@ export class IndiceService {
           const cotizaciones = await this.gempresaService.getCotizacionesIndices(indice.code, fechaDesde, fechaHasta);
 
           //Chequeo que las cotizaciones sean de dias habiles y de los horarios en que esta la bolsa abierta
-          if(cotizaciones) {
+          if (cotizaciones) {
             const cotizacionesValidas = cotizaciones.filter((cot) => {
               let validoDia = true;
               let validoHora = true;
               const horaApertura = process.env.HORA_APERTURA
               const horaCierre = process.env.HORA_CIERRE
-              
+
               const dia = (DateUtils.getFechaFromRegistroFecha({ fecha: cot.fecha, hora: cot.hora })).getDay();
-      
+
               if (dia == 0 || dia == 6) {
                 validoDia = false;
               }
-              if (cot.hora < horaApertura|| cot.hora > horaCierre) {
+              if (cot.hora < horaApertura || cot.hora > horaCierre) {
                 validoHora = false;
               }
               return validoDia && validoHora;
@@ -136,7 +136,7 @@ export class IndiceService {
                   codigoIndice: cotizacion.code,
                   valorIndice: cotizacion.valor,
                   fecha: cotizacion.fecha,
-                  hora: cotizacion.hora.substring(0,5),
+                  hora: cotizacion.hora.substring(0, 5),
                   id: null
                 });
               })
@@ -220,4 +220,30 @@ export class IndiceService {
     const datosFiltrados = datos.filter(dataset => dataset.length != 0)
     return datosFiltrados;
   }
+
+  /**
+ * Funcion que retorna la ultima cotizacion del indice de la bolsa y la variacion diaria
+ */
+  async cotizacionActualIndice(): Promise<any> {
+
+    //Las recorro para buscar las cotizaciones actuales
+    const ultimaCot = await this.getUltimoValorIndice('N100');
+
+    //Busco la cotizacion de cierre anterior
+    const criterio: FindManyOptions<Indice> = {
+      where: { codigoIndice: 'N100' , hora: process.env.HORA_CIERRE, fecha: Not(ultimaCot.fecha) },
+      order: {
+        fecha: "DESC"
+      },
+      take: 1,
+    };
+    const cotAnterior: Indice[] = await this.indiceRepository.find(criterio);
+
+    const variacion = Number(((ultimaCot.valorIndice - cotAnterior[0].valorIndice) / cotAnterior[0].valorIndice * 100).toFixed(2));
+    return ({
+      codigoIndice: 'N100',
+      ultimaCot: ultimaCot.valorIndice,
+      variacion: variacion
+    });
+    }
 }

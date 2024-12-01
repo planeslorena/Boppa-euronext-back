@@ -14,4 +14,9 @@ export class IndiceController {
   ): Promise<Indice[][]> {
      return await this.indiceService.getDatosGrafico({dias: dias, allIndices: allIndices});
   }
+
+  @Get('/cotizacionActual')
+  async getCotizacionActual(): Promise<any[]> {
+    return await this.indiceService.cotizacionActualIndice();
+  }
 }

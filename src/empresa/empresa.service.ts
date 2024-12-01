@@ -31,7 +31,7 @@ export class EmpresaService {
 
 
   //Obtengo la ultimas cotizacion de una empresa
-  async getUltimasCotizaciones(codigoEmpresa: string): Promise<Cotizacion[]> {
+  async getUltimaCotizacion(codigoEmpresa: string): Promise<Cotizacion> {
     try {
       const criterio: FindManyOptions<Cotizacion> = {
         where: { empresa: { codEmpresa: codigoEmpresa } },
@@ -42,8 +42,8 @@ export class EmpresaService {
         take: 1,
       };
 
-      const ultCotizaciones = await this.cotizacionRepository.find(criterio);
-      return ultCotizaciones;
+      const ultCotizacion = await this.cotizacionRepository.find(criterio);
+      return ultCotizacion[0];
     } catch (error) {
       this.logger.error(error);
     }
@@ -68,8 +68,7 @@ export class EmpresaService {
     //Las recorro para buscar las cotizaciones faltantes
     empresas.forEach(async empresa => {
       //Busco la ultima cotizacion guardada de la empresa
-      const ultimasCot: Cotizacion[] = await this.getUltimasCotizaciones(empresa.codEmpresa);
-      let ultimaCot = ultimasCot[0];
+      const ultimaCot: Cotizacion = await this.getUltimaCotizacion(empresa.codEmpresa);
 
       let fechaDesde = '';
       if (!ultimaCot) {
@@ -87,8 +86,7 @@ export class EmpresaService {
       //Busco las cotizaciones faltantes
       const cotizaciones: Cotizacion[] = await this.gempresaService.getCotizaciones(empresa.codEmpresa, fechaDesde, fechaHasta);
 
-      //Tengo que chequear que esten dentro de los rangos que me interesan (Lu a Vi de 9 a 15hs (hora de amsterdam))
-      //O sea de 8 a 14 hora UTC
+      //Chequea que esten dentro del horario de apertura de la bolsa(Lu a Vi de 9 a 15hs (hora de amsterdam))
       const cotizacionesValidas = cotizaciones.filter((cot) => {
         let validoDia = true;
         let validoHora = true;
@@ -132,11 +130,11 @@ export class EmpresaService {
     //Las recorro para buscar las cotizaciones actuales
     let cotizaciones = await Promise.all(empresas.map(async empresa => {
       //Busco la ultima cotizacion guardada de la empresa
-      const ultimaCot = await this.getUltimasCotizaciones(empresa.codEmpresa);
+      const ultimaCot = await this.getUltimaCotizacion(empresa.codEmpresa);
 
       //Busco la cotizacion de cierre anterior
       const criterio: FindManyOptions<Cotizacion> = {
-        where: { empresa: { codEmpresa: empresa.codEmpresa }, hora: process.env.HORA_CIERRE, fecha: Not(ultimaCot[0].fecha) },
+        where: { empresa: { codEmpresa: empresa.codEmpresa }, hora: process.env.HORA_CIERRE, fecha: Not(ultimaCot.fecha) },
         order: {
           fecha: "DESC"
         },
@@ -144,11 +142,11 @@ export class EmpresaService {
       };
       const cotAnterior = await this.cotizacionRepository.find(criterio);
 
-      const variacion = Number(((ultimaCot[0].cotization - cotAnterior[0].cotization) / cotAnterior[0].cotization * 100).toFixed(2));
+      const variacion = Number(((ultimaCot.cotization - cotAnterior[0].cotization) / cotAnterior[0].cotization * 100).toFixed(2));
       return ({
         codEmpresa: empresa.codEmpresa,
         empresaNombre: empresa.empresaNombre,
-        ultimaCot: ultimaCot[0].cotization,
+        ultimaCot: ultimaCot.cotization,
         variacion: variacion
       });
     })
@@ -216,11 +214,37 @@ export class EmpresaService {
     const fechaDesde = momentTZ.tz(new Date(), process.env.TIME_ZONE).add(-dias, 'days').toISOString().substring(0, 16);
     const fechaHasta = momentTZ.tz(new Date(), process.env.TIME_ZONE).toISOString().substring(0, 16);
 
-    let codIndices: Cotizacion[] = [];
-
     const cotizaciones = await this.getCotizacionesByFecha(codEmpresa, fechaDesde, fechaHasta);
     const datos = await Promise.all(cotizaciones);
     return datos;
+  }
+
+  /**
+   * Funcion que calcula la participacion de cada empresa en la bolsa
+   */
+  async participacionEmpresas(){
+    const empresas: Empresa[] = await this.getAllEmpresas();
+
+    const empresasConValor = await Promise.all(empresas.map (async empresa => {
+      const ultCotizacion = await this.getUltimaCotizacion(empresa.codEmpresa);
+
+      const valorEmpresa = empresa.cantidadAcciones*ultCotizacion.cotization;
+
+      return {
+        ...empresa,
+        valorEmpresa: valorEmpresa,
+      }
+    }))
+
+    console.log(empresasConValor)
+    
+    let valorTotal = 0;
+    empresasConValor.map(empresa => {
+       valorTotal += empresa.valorEmpresa
+    })
+
+    
+
   }
 }
 

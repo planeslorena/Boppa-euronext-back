@@ -235,15 +235,20 @@ export class EmpresaService {
         valorEmpresa: valorEmpresa,
       }
     }))
-
-    console.log(empresasConValor)
     
     let valorTotal = 0;
     empresasConValor.map(empresa => {
        valorTotal += empresa.valorEmpresa
     })
 
-    
+    const participacionEmpresas = empresasConValor.map(empresa => {
+      return {
+        ...empresa,
+        participacionMercado: (empresa.valorEmpresa/valorTotal*100).toFixed(2),
+      }
+    })
+
+    return participacionEmpresas;
 
   }
 }

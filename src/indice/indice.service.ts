@@ -26,6 +26,7 @@ export class IndiceService {
     try {
       //Busco el ultimo indice guardado
       const ultIndice: Indice[] = await this.indiceRepository.find({
+        where: { codigoIndice: 'N100' } ,
         order: {
           fecha: "DESC",
           hora: "DESC"
@@ -89,7 +90,6 @@ export class IndiceService {
     try {
       //Busco todas los indices
       const indices: IIndice[] = await this.gempresaService.getIndices();
-      console.log(indices)
       //Ls recorro para buscar las cotizaciones faltantes
       indices.forEach(async indice => {
         if (indice.code != 'N100') {
@@ -202,8 +202,12 @@ export class IndiceService {
    * @returns 
    */
   async getDatosGrafico(criterio: { dias: number, allIndices: number }) {
-    const fechaDesde = momentTZ.tz(new Date(), process.env.TIME_ZONE).add(-criterio.dias, 'days').toISOString().substring(0, 16);
-    const fechaHasta = momentTZ.tz(new Date(), process.env.TIME_ZONE).toISOString().substring(0, 16);
+
+    const ultIndice = await this.getUltimoValorIndice('N100');
+    const fechaHasta = `${ultIndice.fecha}T${ultIndice.hora}`
+    console.log(fechaHasta)
+    const fechaDesde = momentTZ.tz(fechaHasta, process.env.TIME_ZONE).add(-criterio.dias, 'days').toISOString().substring(0, 16);
+    console.log(fechaDesde)
 
     let codIndices: IIndice[] = [];
 

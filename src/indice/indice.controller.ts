@@ -19,4 +19,13 @@ export class IndiceController {
   async getCotizacionActual(): Promise<any[]> {
     return await this.indiceService.cotizacionActualIndice();
   }
+
+  @Get('/indicebyfechas/:codIndice')
+  async getCotizacionesByFecha(
+    @Param('codIndice') codIndice: string,
+    @Query('fechaDesde') fechaDesde: string,
+    @Query('fechaHasta') fechaHasta: string,
+  ): Promise<any[]> {
+    return await this.indiceService.getIndicesbyFecha(codIndice,fechaDesde,fechaHasta);
+  }
 }

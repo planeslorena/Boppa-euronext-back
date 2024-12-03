@@ -217,8 +217,11 @@ export class IndiceService {
       codIndices.push({ code: 'N100', name: 'Euronext 100 Index' });
     }
 
-    const cotizaciones = codIndices.map(async indice => {
-      return await this.getIndicesbyFecha(indice.code, fechaDesde, fechaHasta);
+    const indices = codIndices.filter(indice => indice.code);
+
+    const cotizaciones = indices.map(async indice => {
+      const datosIndice= await this.getIndicesbyFecha(indice.code, fechaDesde, fechaHasta);
+      return datosIndice;
     });
     const datos = await Promise.all(cotizaciones);
     const datosFiltrados = datos.filter(dataset => dataset.length != 0)

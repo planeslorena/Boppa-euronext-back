@@ -205,9 +205,7 @@ export class IndiceService {
 
     const ultIndice = await this.getUltimoValorIndice('N100');
     const fechaHasta = `${ultIndice.fecha}T${ultIndice.hora}`
-    console.log(fechaHasta)
     const fechaDesde = momentTZ.tz(fechaHasta, process.env.TIME_ZONE).add(-criterio.dias, 'days').toISOString().substring(0, 16);
-    console.log(fechaDesde)
 
     let codIndices: IIndice[] = [];
 

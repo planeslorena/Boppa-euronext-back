@@ -211,8 +211,9 @@ export class EmpresaService {
    * @returns 
    */
   async getDatosGrafico(codEmpresa: string,dias: number) {
-    const fechaDesde = momentTZ.tz(new Date(), process.env.TIME_ZONE).add(-dias, 'days').toISOString().substring(0, 16);
-    const fechaHasta = momentTZ.tz(new Date(), process.env.TIME_ZONE).toISOString().substring(0, 16);
+    const ultCotizacion = await this.getUltimaCotizacion(codEmpresa);
+    const fechaHasta = `${ultCotizacion.fecha}T${ultCotizacion.hora}`
+    const fechaDesde = momentTZ.tz(fechaHasta, process.env.TIME_ZONE).add(-dias, 'days').toISOString().substring(0, 16);
 
     const cotizaciones = await this.getCotizacionesByFecha(codEmpresa, fechaDesde, fechaHasta);
     const datos = await Promise.all(cotizaciones);

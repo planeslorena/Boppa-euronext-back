@@ -1,21 +1,30 @@
 FROM node:20-alpine3.19
 
-# Creo directorio de trabajo en el docker
+# Instalar dependencias del sistema
+RUN apk add --no-cache wget
+
+# Descargar y configurar dockerize
+RUN wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz \
+    && tar -xzvf dockerize-linux-amd64-v0.6.1.tar.gz \
+    && mv dockerize /usr/local/bin/dockerize
+
+# Crear el directorio de la aplicación
 WORKDIR /usr/src/app
 
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# Copiar archivos de configuración
 COPY package*.json ./
 
-#instalo en nest (es una instalacion global que va en la maquina y no en el proyecto)
+# Instalar dependencias de Node.js
 RUN npm install -g @nestjs/cli
 
-# copio todo lo del directorio en el que estoy al directorio actual del docker
+# Copiar el código fuente de la aplicación
 COPY . .
 
-#buildeo la aplicacion que copie
+# Compilar la aplicación
 RUN npm run build
 
-EXPOSE 3000
+# Exponer el puerto
+EXPOSE 8080
 
-#comando para iniciar aplicación
-CMD ["npm", "run", "start:prod"]
+# Usar dockerize para esperar a MySQL y luego iniciar la aplicación
+CMD ["dockerize", "-wait", "tcp://mysql:3306", "-timeout", "60s", "--", "npm", "run", "start:prod"]

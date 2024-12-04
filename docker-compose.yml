@@ -1,0 +1,44 @@
+services:
+  # Servicio para tu aplicación Node.js
+  app:
+    build:
+      context: . # El contexto es el directorio actual, asumiendo que el Dockerfile está en el mismo lugar
+      dockerfile: Dockerfile # Aquí se construye la imagen desde tu Dockerfile
+    ports:
+      - "8080:8080" # Exponer el puerto de tu aplicación, puedes cambiarlo si es necesario
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root2024 
+      - MYSQL_DB=euronext
+      - TIME_ZONE=Europe/Amsterdam
+      - HORA_APERTURA=09:00
+      - HORA_CIERRE=15:00
+    depends_on:
+      - mysql # Para asegurarse de que las bases de datos se inicien antes que la app
+    networks:
+      - euronextnetwork
+
+
+  # Servicio para MySQL
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    ports:
+      - "3316:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root2024 # Contraseña del usuario root
+      MYSQL_DATABASE: euronext # Nombre de la base de datos inicial
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - mysql-data:/var/lib/mysql # Persistencia de datos en un volumen
+    networks:
+      - euronextnetwork
+
+volumes:
+  mysql-data:
+
+networks:
+  euronextnetwork:
+    driver: bridge
